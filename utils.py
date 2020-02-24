@@ -1,16 +1,88 @@
+import hashlib
+import json
 import re
+import urllib
 
-from bs4 import BeautifulSoup
+import requests
 
 
 class Utils:
+
+    @staticmethod
+    def parse_group_elements(group_elements, s, headers):
+        max_users_count = None
+        group_datas = []
+        for group_element in group_elements:
+            # parse group data
+            group_data = Utils.parse_group_tag(group_tag=group_element, session=s, headers=headers)
+            if group_data is not None:
+                group_datas.append(group_data)
+                if max_users_count is None:
+                    max_users_count = group_data['users_count']
+                else:
+                    max_users_count = max(max_users_count, group_data['users_count'])
+
+        uids = ''
+        for group_data in group_datas:
+            if group_data is not None:
+                if len(uids) > 0:
+                    uids = uids + ','
+                uids = uids + '{}'.format(group_data['groupId'])
+
+        if len(uids) > 0:
+            # OK API
+            application_id = '512000025985'
+            client_key = 'CCIGGFJGDIHBABABA'
+            client_secret = '9CF17E8FE80499EBF9689343'
+            access_token = 'tkn1UivsiIJu3S2kQIGbRznqxG4msFox4uKZJo6adQcwBXkidpybEg9mLKWfRiIzrN8y3'
+            # API_SERVER = 'https://api.ok.ru/api'
+            API_SERVER = 'https://api.ok.ru/fb.do'
+
+            params = {
+                'method': 'group.getInfo',
+                'format': 'json',
+                'uids': uids,
+                'fields': 'admin_id,uid',
+            }
+
+            secret_key = hashlib.md5((access_token + client_secret).encode('utf8')).hexdigest()
+            application_key = 'application_key=' + client_key + 'fields=admin_id,uidformat=jsonmethod=group.getInfo' \
+                              + 'uids=' + uids + secret_key
+            sig = hashlib.md5(application_key.encode('utf8')).hexdigest()
+            uidparam = urllib.parse.quote(uids)
+            api_request = 'https://api.ok.ru/fb.do' \
+                          '?application_key={}' \
+                          '&fields=admin_id%2Cuid' \
+                          '&format=json' \
+                          '&method=group.getInfo' \
+                          '&uids={}' \
+                          '&sig={}' \
+                          '&access_token={}' \
+                .format(client_key, uidparam, sig, access_token)
+
+            res = requests.get(api_request).text
+            results = json.loads(res)
+
+            for result in results:
+                group_id = result['uid']
+                for group_data in group_datas:
+                    if group_data is not None and group_id == group_data['groupId']:
+                        try:
+                            group_data['admin_id'] = result['admin_id']
+                        except KeyError:
+                            print('ERROR ---- no group admin')
+                            group_datas.remove(group_data)
+            if len(group_datas) > 0:
+                request = 'https://www.advertising-orange.com/?action=addOkGroup'
+                res = requests.post(request, json=group_datas)
+
+        return max_users_count
 
     @staticmethod
     def parse_group_tag(group_tag, session, headers):
         group_data = {}
 
         title_tag = group_tag.find('a', attrs={"class": "gs_result_i_t_name o"})
-
         title = title_tag['title']
         group_data['title'] = title
 
@@ -18,18 +90,15 @@ class Utils:
         group_data['link'] = link
 
         group_id = None
-
         try:
             hrefattrs = str(title_tag['hrefattrs'])
             splits = re.split("&", hrefattrs)
         except KeyError:
             splits = re.split("&", link)
-
         for split in splits:
             if split.__contains__('st.groupId'):
                 group_id_splits = re.split("=", str(split))
                 group_id = int(group_id_splits[1])
-
         if group_id is not None:
             group_data['groupId'] = group_id
 
@@ -45,38 +114,26 @@ class Utils:
             total_count = int(splits[0]) * 1000000
         else:
             total_count = int(users_count_text)
-        group_data['users_count'] = total_count
+        if total_count < Constants.OK_GROUP_MAX_USERS_COUNT:
+            group_data['users_count'] = total_count
+        else:
+            return None
 
         try:
             group_descr_tag = group_tag.find('div', attrs={"class": "textWrap invisible js-group-description-full"})
             group_descr_text = str(group_descr_tag.getText())
         except AttributeError:
             group_descr_text = ''
-
-        try:
-            r = session.get(group_data['link'], headers=headers, timeout=5)
-            print(r.text)
-            print('1')
-            soup = BeautifulSoup(r.text, 'html.parser')
-            print('2')
-            admin_div = soup.find('div', attrs={"class": "group-info_row__admin"})
-            print('3')
-            # print(str(admin_div))
-            href_tag = admin_div.find('a', attrs={"class": "o"})
-            print('4')
-            admin_link = 'https://ok.ru{}'.format(str(href_tag['href']))
-            group_data['admin'] = admin_link
-        except AttributeError as error:
-            print(str(error))
-            return None
-
         group_data['descr'] = group_descr_text
+
         return group_data
 
 
 class Constants:
+    OK_GROUP_MAX_USERS_COUNT = 1000
+    OK_SESSION_COOKIES_FILE_NAME = 'cookies.txt'
     DEMO_KEY_WORDS = [
-        "Маникюр", "Педикюр", "магазин", "Студия", "Массаж"
+        "Маникюр"
     ]
     KEY_WORDS = [
         "Маникюр", "Педикюр", "магазин", "Студия", "Массаж", "Бахилы", "Наращивание ресниц"
