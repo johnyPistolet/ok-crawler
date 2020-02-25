@@ -62,8 +62,10 @@ class Utils:
 
             res = requests.get(api_request).text
             results = json.loads(res)
+            print("results ==== $results")
 
             for result in results:
+                print("result ==== $result")
                 group_id = result['uid']
                 for group_data in group_datas:
                     if group_data is not None and group_id == group_data['groupId']:
