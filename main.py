@@ -105,6 +105,7 @@ gwt_requested = None
 keywords = Constants.KEY_WORDS
 random.shuffle(keywords)
 for search_query in Constants.KEY_WORDS:
+    time.sleep(random.randint(3, 14))
     print('\n\n----------------\n------ query = "{}" ------\n----------------\n\n'.format(search_query))
     request = 'https://www.advertising-orange.com/?action=wasOkKeywordExecutedLastDays'
     res = requests.get(request, params={'keyword': search_query, 'daysAgo': 3})
@@ -140,7 +141,7 @@ for search_query in Constants.KEY_WORDS:
         page = 50
         ok_group_max_users_count = 0
         while page > 1 and ok_group_max_users_count < Constants.OK_GROUP_MAX_USERS_COUNT:
-            time.sleep(random.randint(3, 14))
+            time.sleep(random.randint(14, 35))
             print(('\n---------   SEARCH GROUPS  --  PAGE - {}  --  KEY - {}  --------'.format(page, search_query)))
             path = '/search?cmd=PortalSearchResults&st.cmd=searchResult' \
                    '&st.mode=Groups&st.query={}&st.grmode=Groups' \
