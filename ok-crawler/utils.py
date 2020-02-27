@@ -34,8 +34,7 @@ class Utils:
             application_id = '512000025985'
             client_key = 'CCIGGFJGDIHBABABA'
             client_secret = '9CF17E8FE80499EBF9689343'
-            access_token = 'tkn18Uv48LF5b7Y6D6t2mRP63lFPi5p7ARPipxiw8TOYGE7FgsKFhNDfMzqR8Dva5kAq3'
-            session_secret_key = '7e17d0a2dfdda7a53f5047b7011236e4'
+            access_token = 'tkn1UivsiIJu3S2kQIGbRznqxG4msFox4uKZJo6adQcwBXkidpybEg9mLKWfRiIzrN8y3'
             # API_SERVER = 'https://api.ok.ru/api'
             API_SERVER = 'https://api.ok.ru/fb.do'
 
@@ -46,8 +45,7 @@ class Utils:
                 'fields': 'admin_id,uid',
             }
 
-            secret_key = session_secret_key
-            #secret_key = hashlib.md5((access_token + client_secret).encode('utf8')).hexdigest()
+            secret_key = hashlib.md5((access_token + client_secret).encode('utf8')).hexdigest()
             application_key = 'application_key=' + client_key + 'fields=admin_id,uidformat=jsonmethod=group.getInfo' \
                               + 'uids=' + uids + secret_key
             sig = hashlib.md5(application_key.encode('utf8')).hexdigest()
@@ -64,10 +62,8 @@ class Utils:
 
             res = requests.get(api_request).text
             results = json.loads(res)
-            print("results ==== {}".format(results))
 
             for result in results:
-                print("result ==== {}".format(result))
                 group_id = result['uid']
                 for group_data in group_datas:
                     if group_data is not None and group_id == group_data['groupId']:
